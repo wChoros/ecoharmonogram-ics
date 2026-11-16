@@ -1,0 +1,4 @@
+# ecoharmonogram-ics: codzienne odświeżenie harmonogramu (logi: journalctl -t ecocal)
+SHELL=/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+17 4 * * * ecocal set -a; . /etc/ecocal/ecocal.env; set +a; ecocal fetch 2>&1 | logger -t ecocal

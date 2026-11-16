@@ -1,0 +1,45 @@
+[Unit]
+Description=ecoharmonogram-ics: serwer kalendarza wywozu odpadów
+Documentation=https://github.com/wChoros/ecoharmonogram-ics
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ecocal
+Group=ecocal
+EnvironmentFile=/etc/ecocal/ecocal.env
+Environment=GOMEMLIMIT=8MiB GOGC=50
+ExecStart=/usr/local/bin/ecocal serve
+Restart=on-failure
+RestartSec=5
+
+# Limity zasobów
+MemoryMax=24M
+TasksMax=16
+
+# Utwardzenie: proces tylko czyta plik i obsługuje TCP
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
