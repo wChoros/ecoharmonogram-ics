@@ -136,5 +136,5 @@ else
 fi
 echo "     Jeśli dostawca VPS ma firewall sieciowy (np. w panelu OVH), dodaj tam regułę."
 echo "  2. Sprawdź z zewnątrz:  curl -I http://${IP:-<IP-serwera>}:$PORT_NOW$ECOCAL_PATH"
-echo "  3. Apple Calendar: Plik → Nowa subskrypcja kalendarza (odznacz \"Usuń: Alarmy\")."
+echo "  3. Apple Calendar: Plik → Nowa subskrypcja kalendarza."
 echo "     Google Calendar: Inne kalendarze → + → Z adresu URL."

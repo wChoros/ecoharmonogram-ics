@@ -84,8 +84,10 @@ func cmdFetch(args []string) error {
 	payments := fs.Bool("payments", envBool("PAYMENTS"), "dołącz terminy płatności (ECOCAL_PAYMENTS)")
 	name := fs.String("name", env("NAME", "Wywóz śmieci"), "nazwa kalendarza (ECOCAL_NAME)")
 	out := fs.String("out", env("FILE", "calendar.ics"), "plik wyjściowy (ECOCAL_FILE)")
-	start := fs.String("start", env("START", "06:00"), "godzina wydarzenia HH:MM albo all-day (ECOCAL_START)")
+	start := fs.String("start", env("START", "21:00"), "godzina wydarzenia HH:MM albo all-day (ECOCAL_START)")
 	duration := fs.String("duration", env("DURATION", "1h"), "czas trwania wydarzenia (ECOCAL_DURATION)")
+	daysBefore := fs.Int("days-before", int(envFloat("DAYS_BEFORE", 1)), "ile dni przed odbiorem umieścić wydarzenie (ECOCAL_DAYS_BEFORE)")
+	alarm := fs.Bool("alarm", envBool("ALARM"), "dodaj alarm w chwili rozpoczęcia wydarzenia (ECOCAL_ALARM)")
 	_ = fs.Parse(args)
 	if *town == "" || *street == "" {
 		return errors.New("wymagane -town i -street")
@@ -94,6 +96,10 @@ func cmdFetch(args []string) error {
 	if err != nil {
 		return err
 	}
+	if *daysBefore < 0 || *daysBefore > 7 {
+		return errors.New("-days-before musi być w zakresie 0–7")
+	}
+	et.DaysBefore, et.Alarm = *daysBefore, *alarm
 
 	towns, err := getTowns()
 	if err != nil {

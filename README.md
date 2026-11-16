@@ -55,8 +55,10 @@ Ponowne uruchomienie skryptu aktualizuje binarkę, unit i crona. Konfiguracji ni
 | `ECOCAL_STREET` | ulica | – |
 | `ECOCAL_NAME` | nazwa kalendarza | `Wywóz śmieci` |
 | `ECOCAL_PAYMENTS` | `true` dodaje terminy płatności | `false` |
-| `ECOCAL_START` | godzina wydarzenia `HH:MM` (czas polski) albo `all-day` | `06:00` |
+| `ECOCAL_START` | godzina wydarzenia `HH:MM` (czas polski) albo `all-day` | `21:00` |
 | `ECOCAL_DURATION` | czas trwania wydarzenia, np. `1h`, `30m` | `1h` |
+| `ECOCAL_DAYS_BEFORE` | ile dni przed odbiorem umieścić wydarzenie (`0` = w dniu odbioru) | `1` |
+| `ECOCAL_ALARM` | `true` dodaje alarm w chwili rozpoczęcia wydarzenia | `false` |
 | `ECOCAL_FILE` | plik `.ics` | `/var/lib/ecocal/calendar.ics` |
 | `ECOCAL_ADDR` | adres nasłuchu | `:8787` |
 | `ECOCAL_PATH` | ścieżka URL (sekretna) | losowy token |
@@ -76,9 +78,9 @@ sudo runuser -u ecocal -- sh -c 'set -a; . /etc/ecocal/ecocal.env; exec ecocal f
 
 ## Subskrypcja
 
-Każde wydarzenie ma przypomnienie o 19:00 dzień wcześniej.
+Domyślnie każdy odbiór to wydarzenie o 21:00 dzień wcześniej, np. „⚫ Jutro: odpady niesegregowane”, bez alarmów. Dzięki temu widać je na zegarku i w widżetach dokładnie wtedy, kiedy trzeba wystawić śmieci.
 
-**Apple Calendar (macOS):** Plik → **Nowa subskrypcja kalendarza** → wklej `http://<IP>:<port>/<token>.ics`. W oknie ustawień odznacz **Usuń: Alarmy**, żeby przypomnienia działały, i ustaw automatyczne odświeżanie, np. co godzinę. Jeśli jako miejsce wybierzesz iCloud, kalendarz pojawi się też na iPhonie. Na iPhonie: Ustawienia → Kalendarz → Konta → Dodaj konto → Inne → **Dodaj subskrybowany kalendarz**.
+**Apple Calendar (macOS):** Plik → **Nowa subskrypcja kalendarza** → wklej `http://<IP>:<port>/<token>.ics`. W oknie ustawień ustaw automatyczne odświeżanie, np. co godzinę. Jeśli włączysz `ECOCAL_ALARM`, odznacz też **Usuń: Alarmy**. Jeśli jako miejsce wybierzesz iCloud, kalendarz pojawi się też na iPhonie. Na iPhonie: Ustawienia → Kalendarz → Konta → Dodaj konto → Inne → **Dodaj subskrybowany kalendarz**.
 
 **Google Calendar:** Ustawienia → **Dodaj kalendarz** → **Z adresu URL**. Google odświeża subskrypcje co kilka do kilkunastu godzin i ignoruje alarmy z pliku, więc powiadomienia ustawia się w ustawieniach kalendarza.
 

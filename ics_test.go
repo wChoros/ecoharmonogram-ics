@@ -93,26 +93,42 @@ func TestFindStreet(t *testing.T) {
 	}
 }
 
-func TestBuildICSTimedEvents(t *testing.T) {
-	et, err := ParseEventTime("06:00", "1h")
+func TestBuildICSEveningBefore(t *testing.T) {
+	et, err := ParseEventTime("21:00", "1h")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ics := BuildICS("Test", []Collection{{d(2026, 3, 29), "ODPADY NIESEGREGOWANE"}}, et)
+	et.DaysBefore = 1
+	ics := BuildICS("Test", []Collection{{d(2026, 3, 1), "ODPADY NIESEGREGOWANE"}}, et)
 	for _, want := range []string{
 		"BEGIN:VTIMEZONE\r\nTZID:Europe/Warsaw\r\n",
-		"DTSTART;TZID=Europe/Warsaw:20260329T060000\r\nDTEND;TZID=Europe/Warsaw:20260329T070000\r\n",
-		"TRIGGER:-PT11H\r\n", // 19:00 dzień wcześniej
+		"UID:20260301-", // UID od dnia odbioru, niezależnie od przesunięcia
+		"DTSTART;TZID=Europe/Warsaw:20260228T210000\r\nDTEND;TZID=Europe/Warsaw:20260228T220000\r\n",
+		"SUMMARY:⚫ Jutro: odpady niesegregowane\r\n",
+		"Odbiór 01.03.2026.",
 	} {
-		if !strings.Contains(ics, want) {
+		if !strings.Contains(strings.ReplaceAll(ics, "\r\n ", ""), want) {
 			t.Errorf("brak %q", want)
 		}
 	}
-	if strings.Contains(ics, "VALUE=DATE:") {
-		t.Error("wydarzenie nie powinno być całodniowe")
+	if strings.Contains(ics, "VALARM") || strings.Contains(ics, "VALUE=DATE:") {
+		t.Error("bez alarmu i nie całodniowe")
 	}
-	if all := BuildICS("Test", []Collection{{d(2026, 3, 29), "X"}}, EventTime{AllDay: true}); strings.Contains(all, "VTIMEZONE") || !strings.Contains(all, "TRIGGER:-PT5H") {
-		t.Error("całodniowe: zbędna strefa albo zły alarm")
+	et.Alarm = true
+	if !strings.Contains(BuildICS("Test", []Collection{{d(2026, 3, 1), "X"}}, et), "TRIGGER:PT0S") {
+		t.Error("brak alarmu po włączeniu")
+	}
+	if strings.Contains(BuildICS("Test", []Collection{{d(2026, 3, 1), "X"}}, EventTime{AllDay: true}), "VTIMEZONE") {
+		t.Error("całodniowe: zbędna strefa")
+	}
+}
+
+func TestSummaryFor(t *testing.T) {
+	if got := SummaryFor("PAPIER, TWORZYWA SZTUCZNE, SZKŁO", 0); got != "🟡 Papier, tworzywa sztuczne, szkło" {
+		t.Errorf("0: %q", got)
+	}
+	if got := SummaryFor("ODPADY BIODEGRADOWALNE", 2); got != "🟤 Za 2 dni: odpady biodegradowalne" {
+		t.Errorf("2: %q", got)
 	}
 }
 
@@ -122,9 +138,6 @@ func TestParseEventTime(t *testing.T) {
 	}
 	if et, err := ParseEventTime("05:30", "45m"); err != nil || et.Start != 5*time.Hour+30*time.Minute || et.Duration != 45*time.Minute {
 		t.Errorf("05:30: %+v %v", et, err)
-	}
-	if formatDuration(10*time.Hour+30*time.Minute) != "10H30M" || formatDuration(30*time.Minute) != "30M" {
-		t.Error("formatDuration")
 	}
 	for _, bad := range [][2]string{{"25:00", "1h"}, {"6", "1h"}, {"06:00", "0"}, {"06:00", "abc"}} {
 		if _, err := ParseEventTime(bad[0], bad[1]); err == nil {

@@ -28,11 +28,13 @@ var kindEmoji = map[string]string{
 // PaymentsKind to frakcja z terminami opłat, domyślnie pomijana.
 const PaymentsKind = "TERMINY PŁATNOŚCI"
 
-// EventTime określa porę wydarzenia. Zerowa wartość (AllDay=true) daje wydarzenia całodniowe.
+// EventTime określa porę wydarzenia względem dnia odbioru.
 type EventTime struct {
-	AllDay   bool
-	Start    time.Duration // od północy czasu polskiego, np. 6h
-	Duration time.Duration
+	AllDay     bool
+	Start      time.Duration // od północy czasu polskiego, np. 21h
+	Duration   time.Duration
+	DaysBefore int  // 1 = wydarzenie dzień przed odbiorem
+	Alarm      bool // alarm w chwili rozpoczęcia wydarzenia
 }
 
 // ParseEventTime czyta "06:00" + "1h"; "all-day" (albo "") daje wydarzenia całodniowe.
@@ -99,8 +101,6 @@ func BuildICS(name string, cs []Collection, et EventTime) string {
 			line(l)
 		}
 	}
-	// Alarm o 19:00 dzień wcześniej, liczony względem początku wydarzenia.
-	trigger := "-PT" + formatDuration(et.Start+5*time.Hour)
 	seen := make(map[string]bool)
 	for _, c := range sorted {
 		uid := fmt.Sprintf("%s-%08x@ecocal", c.Date.Format("20060102"), crc32.ChecksumIEEE([]byte(c.Kind)))
@@ -111,39 +111,48 @@ func BuildICS(name string, cs []Collection, et EventTime) string {
 		line("BEGIN:VEVENT")
 		line("UID:" + uid)
 		line("DTSTAMP:" + c.Date.Format("20060102") + "T000000Z")
+		day := c.Date.AddDate(0, 0, -et.DaysBefore)
 		if et.AllDay {
-			line("DTSTART;VALUE=DATE:" + c.Date.Format("20060102"))
-			line("DTEND;VALUE=DATE:" + c.Date.AddDate(0, 0, 1).Format("20060102"))
+			line("DTSTART;VALUE=DATE:" + day.Format("20060102"))
+			line("DTEND;VALUE=DATE:" + day.AddDate(0, 0, 1).Format("20060102"))
 		} else {
 			// Czas lokalny bez strefy w time.Time; strefę niesie TZID.
-			start := c.Date.Add(et.Start)
+			start := day.Add(et.Start)
 			line("DTSTART;TZID=Europe/Warsaw:" + start.Format("20060102T150405"))
 			line("DTEND;TZID=Europe/Warsaw:" + start.Add(et.Duration).Format("20060102T150405"))
 		}
-		line("SUMMARY:" + escapeText(Summary(c.Kind)))
-		line("DESCRIPTION:" + escapeText("Wystaw pojemniki/worki do 6:00 rano w dniu odbioru albo wieczorem dzień wcześniej."))
+		summary := SummaryFor(c.Kind, et.DaysBefore)
+		line("SUMMARY:" + escapeText(summary))
+		line("DESCRIPTION:" + escapeText("Odbiór "+c.Date.Format("02.01.2006")+". Wystaw pojemniki/worki do 6:00 rano w dniu odbioru albo wieczorem dzień wcześniej."))
 		line("TRANSP:TRANSPARENT")
-		line("BEGIN:VALARM")
-		line("ACTION:DISPLAY")
-		line("DESCRIPTION:" + escapeText("Jutro: "+Summary(c.Kind)))
-		line("TRIGGER:" + trigger)
-		line("END:VALARM")
+		if et.Alarm {
+			line("BEGIN:VALARM")
+			line("ACTION:DISPLAY")
+			line("DESCRIPTION:" + escapeText(summary))
+			line("TRIGGER:PT0S")
+			line("END:VALARM")
+		}
 		line("END:VEVENT")
 	}
 	line("END:VCALENDAR")
 	return b.String()
 }
 
-// formatDuration zapisuje czas jako część czasową DURATION z RFC 5545, np. 11H albo 10H30M.
-func formatDuration(d time.Duration) string {
-	h, m := int(d/time.Hour), int(d%time.Hour/time.Minute)
-	switch {
-	case m == 0:
-		return fmt.Sprintf("%dH", h)
-	case h == 0:
-		return fmt.Sprintf("%dM", m)
+// SummaryFor dodaje "Jutro:" / "Za N dni:", gdy wydarzenie jest przed dniem odbioru:
+// "⚫ Jutro: odpady niesegregowane".
+func SummaryFor(kind string, daysBefore int) string {
+	s := Summary(kind)
+	if daysBefore <= 0 {
+		return s
 	}
-	return fmt.Sprintf("%dH%dM", h, m)
+	emoji, text, _ := strings.Cut(s, " ")
+	prefix := "Jutro"
+	if daysBefore > 1 {
+		prefix = fmt.Sprintf("Za %d dni", daysBefore)
+	}
+	r := []rune(text)
+	r[0] = unicode.ToLower(r[0])
+	return emoji + " " + prefix + ": " + string(r)
 }
 
 // Summary zamienia "ODPADY NIESEGREGOWANE" na "⚫ Odpady niesegregowane".
