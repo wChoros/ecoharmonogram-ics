@@ -55,6 +55,8 @@ Ponowne uruchomienie skryptu aktualizuje binarkę, unit i crona. Konfiguracji ni
 | `ECOCAL_STREET` | ulica | – |
 | `ECOCAL_NAME` | nazwa kalendarza | `Wywóz śmieci` |
 | `ECOCAL_PAYMENTS` | `true` dodaje terminy płatności | `false` |
+| `ECOCAL_START` | godzina wydarzenia `HH:MM` (czas polski) albo `all-day` | `06:00` |
+| `ECOCAL_DURATION` | czas trwania wydarzenia, np. `1h`, `30m` | `1h` |
 | `ECOCAL_FILE` | plik `.ics` | `/var/lib/ecocal/calendar.ics` |
 | `ECOCAL_ADDR` | adres nasłuchu | `:8787` |
 | `ECOCAL_PATH` | ścieżka URL (sekretna) | losowy token |
@@ -72,11 +74,13 @@ journalctl -t ecocal                          # logi z crona
 sudo runuser -u ecocal -- sh -c 'set -a; . /etc/ecocal/ecocal.env; exec ecocal fetch'   # pobierz teraz
 ```
 
-## Subskrypcja w Google Calendar
+## Subskrypcja
 
-Ustawienia → **Dodaj kalendarz** → **Z adresu URL** → wklej `http://<IP>:<port>/<token>.ics`.
+Każde wydarzenie ma przypomnienie o 19:00 dzień wcześniej.
 
-Google odświeża subskrybowane kalendarze co kilka do kilkunastu godzin. Alarmy z pliku `.ics` Google ignoruje, więc powiadomienia ustawia się w ustawieniach samego kalendarza.
+**Apple Calendar (macOS):** Plik → **Nowa subskrypcja kalendarza** → wklej `http://<IP>:<port>/<token>.ics`. W oknie ustawień odznacz **Usuń: Alarmy**, żeby przypomnienia działały, i ustaw automatyczne odświeżanie, np. co godzinę. Jeśli jako miejsce wybierzesz iCloud, kalendarz pojawi się też na iPhonie. Na iPhonie: Ustawienia → Kalendarz → Konta → Dodaj konto → Inne → **Dodaj subskrybowany kalendarz**.
+
+**Google Calendar:** Ustawienia → **Dodaj kalendarz** → **Z adresu URL**. Google odświeża subskrypcje co kilka do kilkunastu godzin i ignoruje alarmy z pliku, więc powiadomienia ustawia się w ustawieniach kalendarza.
 
 ## Limit zapytań
 

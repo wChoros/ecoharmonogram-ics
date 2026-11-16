@@ -56,8 +56,8 @@ func TestBuildICSDeterministicAndDeduped(t *testing.T) {
 		{d(2026, 12, 21), "ODPADY NIESEGREGOWANE"},
 		{d(2026, 11, 17), "PAPIER, TWORZYWA SZTUCZNE, SZKŁO"}, // duplikat
 	}
-	a := BuildICS("Test", cs)
-	b := BuildICS("Test", []Collection{cs[2], cs[0], cs[3], cs[1]})
+	a := BuildICS("Test", cs, EventTime{AllDay: true})
+	b := BuildICS("Test", []Collection{cs[2], cs[0], cs[3], cs[1]}, EventTime{AllDay: true})
 	if a != b {
 		t.Error("wynik zależy od kolejności wejścia")
 	}
@@ -90,5 +90,45 @@ func TestFindStreet(t *testing.T) {
 	}
 	if _, err := findStreet(streets, "Leśna"); err == nil {
 		t.Error("oczekiwano błędu dla niejednoznacznej ulicy")
+	}
+}
+
+func TestBuildICSTimedEvents(t *testing.T) {
+	et, err := ParseEventTime("06:00", "1h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ics := BuildICS("Test", []Collection{{d(2026, 3, 29), "ODPADY NIESEGREGOWANE"}}, et)
+	for _, want := range []string{
+		"BEGIN:VTIMEZONE\r\nTZID:Europe/Warsaw\r\n",
+		"DTSTART;TZID=Europe/Warsaw:20260329T060000\r\nDTEND;TZID=Europe/Warsaw:20260329T070000\r\n",
+		"TRIGGER:-PT11H\r\n", // 19:00 dzień wcześniej
+	} {
+		if !strings.Contains(ics, want) {
+			t.Errorf("brak %q", want)
+		}
+	}
+	if strings.Contains(ics, "VALUE=DATE:") {
+		t.Error("wydarzenie nie powinno być całodniowe")
+	}
+	if all := BuildICS("Test", []Collection{{d(2026, 3, 29), "X"}}, EventTime{AllDay: true}); strings.Contains(all, "VTIMEZONE") || !strings.Contains(all, "TRIGGER:-PT5H") {
+		t.Error("całodniowe: zbędna strefa albo zły alarm")
+	}
+}
+
+func TestParseEventTime(t *testing.T) {
+	if et, err := ParseEventTime("all-day", ""); err != nil || !et.AllDay {
+		t.Errorf("all-day: %+v %v", et, err)
+	}
+	if et, err := ParseEventTime("05:30", "45m"); err != nil || et.Start != 5*time.Hour+30*time.Minute || et.Duration != 45*time.Minute {
+		t.Errorf("05:30: %+v %v", et, err)
+	}
+	if formatDuration(10*time.Hour+30*time.Minute) != "10H30M" || formatDuration(30*time.Minute) != "30M" {
+		t.Error("formatDuration")
+	}
+	for _, bad := range [][2]string{{"25:00", "1h"}, {"6", "1h"}, {"06:00", "0"}, {"06:00", "abc"}} {
+		if _, err := ParseEventTime(bad[0], bad[1]); err == nil {
+			t.Errorf("oczekiwano błędu dla %v", bad)
+		}
 	}
 }

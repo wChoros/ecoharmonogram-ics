@@ -84,9 +84,15 @@ func cmdFetch(args []string) error {
 	payments := fs.Bool("payments", envBool("PAYMENTS"), "dołącz terminy płatności (ECOCAL_PAYMENTS)")
 	name := fs.String("name", env("NAME", "Wywóz śmieci"), "nazwa kalendarza (ECOCAL_NAME)")
 	out := fs.String("out", env("FILE", "calendar.ics"), "plik wyjściowy (ECOCAL_FILE)")
+	start := fs.String("start", env("START", "06:00"), "godzina wydarzenia HH:MM albo all-day (ECOCAL_START)")
+	duration := fs.String("duration", env("DURATION", "1h"), "czas trwania wydarzenia (ECOCAL_DURATION)")
 	_ = fs.Parse(args)
 	if *town == "" || *street == "" {
 		return errors.New("wymagane -town i -street")
+	}
+	et, err := ParseEventTime(*start, *duration)
+	if err != nil {
+		return err
 	}
 
 	towns, err := getTowns()
@@ -129,7 +135,7 @@ func cmdFetch(args []string) error {
 		return errors.New("API nie zwróciło żadnych terminów; zostawiam poprzedni plik")
 	}
 
-	ics := []byte(BuildICS(*name, all))
+	ics := []byte(BuildICS(*name, all, et))
 	if old, err := os.ReadFile(*out); err == nil && bytes.Equal(old, ics) {
 		return nil // bez zmian: nie ruszamy mtime, więc klienci dostają 304
 	}
